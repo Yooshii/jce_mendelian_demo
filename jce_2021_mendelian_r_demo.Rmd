@@ -172,9 +172,18 @@ hist(rbeta(10000,5,2))
 hist(rank_inverse_norm(rbeta(10000,5,2)))
 
 ```
-
+#MR-PRESSO
+To estimate the causal effect of the risk factors on the asthma outcome with more than five variants, we used MR Pleiotropy RESidual Sum and Outlier (MR-PRESSO) test. MR-PRESSO test detects violation of the restriction exclusion criterion assumption and provides corrected estimates by removing variants which exhibit pleiotropy. 
 ```{r}
-mr_presso(BetaOutcome="beta.outcome", BetaExposure="beta.exposure",SdOutcome="se.outcome",SdExposure="se.exposure",OUTLIERtest=T, DISTORTIONtest=T,data=pl,NbDistribution=1000,SignifThreshold=0.05)
+model_presso<-mr_presso(BetaOutcome="beta.outcome", BetaExposure="beta.exposure",SdOutcome="se.outcome",SdExposure="se.exposure",OUTLIERtest=T, DISTORTIONtest=T,data=pl,NbDistribution=1000,SignifThreshold=0.05)
+
+
+
+exp(model_presso$`Main MR results`[1,3]	)
+exp(model_presso$`Main MR results`[1,3]-qnorm(0.975)*model_presso$`Main MR results`[1,4]	)
+exp(model_presso$`Main MR results`[1,3]+qnorm(0.975)*model_presso$`Main MR results`[1,4]	)
+
+
 ```
 
 
