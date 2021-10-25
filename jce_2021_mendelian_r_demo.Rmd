@@ -4,7 +4,8 @@ author: "Yoshihiko Raita, MD MPH MMSc"
 date: 
 output: html_notebook
 ---
-
+#Please note that this is still under construction. I need further push of the code. 
+Thanks!
 
 
 #set up the directory
@@ -18,6 +19,7 @@ if (!require('stringr')) install.packages('stringr'); library('stringr')
 if (!require('data.table')) install.packages('data.table'); library('data.table')
 if (!require('TwoSampleMR')) install.packages('TwoSampleMR'); library('TwoSampleMR')
 if (!require('MendelianRandomization')) install.packages('MendelianRandomization'); library('MendelianRandomization')
+if (!require('metafor')) install.packages('metafor'); library('metafor')
 
 ```
 
@@ -30,7 +32,7 @@ In the JAMA paper, they cited the final variants (7 variants) from PLOS Genetics
 
 ```{r}
 calcium_exp_data<-read.csv("calcium_exp_variants.csv", header=TRUE)
-calcium_exp_data
+head(calcium_exp_data,5)
 calcium_exp_data$newposition<-paste0(calcium_exp_data$chromosome,":",calcium_exp_data$position)
 ```
 
@@ -45,6 +47,7 @@ http://csg.sph.umich.edu/willer/public/lipids2013/
 lipid_gwas_df<-data.table::fread("jointGwasMc_LDL.txt",header = TRUE)
 lipid_gwas_df$newposition<-gsub("chr","",lipid_gwas_df$SNP_hg18)
 calcium_exp_data%>%left_join(lipid_gwas_df,by="newposition")
+
 ```
 The P-value of rs780094 is 1.016e-07
 
@@ -67,7 +70,7 @@ smoking_gwas_df<- readr::read_tsv(gzfile("1239.gwas.imputed_v3.both_sexes.tsv.bg
 #smoking_gwas_df<-tidyr::extract(smoking_gwas_df, variant, c('chromosome', 'position', 'allele1', 'allele2'), '(\\d+):(\\d+):(.*):(.*)')
 annotation_df<- readr::read_tsv(gzfile("variants.tsv.bgz"),col_names=TRUE)
 smoking_gwas_df<-smoking_gwas_df%>%left_join(annotation_df, by="variant")
-smoking_gwas_df$newposition<-paste0(smoking_gwas_df$chr,":",smoking_gwas_df$pos)
+#smoking_gwas_df$newposition<-paste0(smoking_gwas_df$chr,":",smoking_gwas_df$pos)
 merge_calcium_smoke<-calcium_exp_data%>%left_join(smoking_gwas_df, by=c("SNP"="rsid"))
 ```
 
@@ -84,7 +87,7 @@ cardio_outcome2<-data.table::fread("cad.add.160614.website.txt",header = TRUE)
 cardio_outcome2$newposition<-paste0(cardio_outcome2$chr,":",cardio_outcome2$bp_hg19)
 ```
 #Mahanttan plot
-You should get the identical Manhattan plot
+You should get the same Manhattan plot
 https://gwas.mrcieu.ac.uk/files/ieu-a-7/ieu-a-7_report.html
 ```{r}
 source("https://raw.githubusercontent.com/YinLiLin/CMplot/master/R/CMplot.r")
@@ -109,6 +112,7 @@ write.csv(merge_data, "snps_final_analysis_calcium_cvd.csv", row.names = F)
 ```
 #Final analysis
 Harmonization
+
 ```{r}
 
 #4.iii rename the columns in the outcome file to be the same for every file
@@ -155,6 +159,17 @@ forest(dmres, atransf=exp,xlab=" ", mlab="Cardiovascular outcome (OR) per 0.5-mg
 
 
 ```
+
+#inverse rank normalization
+```{r}
+rank_inverse_norm<-function(x){qnorm((rank(x,na.last="keep")-0.5)/sum(!is.na(x)))}
+
+hist(rbeta(10000,5,2))
+
+hist(rank_inverse_norm(rbeta(10000,5,2)))
+
+```
+
 
 
 ```{r}
