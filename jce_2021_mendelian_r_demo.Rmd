@@ -17,9 +17,12 @@ if (!require('dplyr')) install.packages('dplyr'); library('dplyr')
 if (!require('readr')) install.packages('readr'); library('readr')
 if (!require('stringr')) install.packages('stringr'); library('stringr')
 if (!require('data.table')) install.packages('data.table'); library('data.table')
-if (!require('TwoSampleMR')) install.packages('TwoSampleMR'); library('TwoSampleMR')
+if (!require("remotes")) { install.packages("remotes") } else {}
+remotes::install_github("MRCIEU/TwoSampleMR");library('TwoSampleMR')
 if (!require('MendelianRandomization')) install.packages('MendelianRandomization'); library('MendelianRandomization')
 if (!require('metafor')) install.packages('metafor'); library('metafor')
+if (!require("devtools")) { install.packages("devtools") } else {}
+devtools::install_github("rondolab/MR-PRESSO");library(MRPRESSO)
 
 ```
 
@@ -170,6 +173,9 @@ hist(rank_inverse_norm(rbeta(10000,5,2)))
 
 ```
 
+```{r}
+mr_presso(BetaOutcome="beta.outcome", BetaExposure="beta.exposure",SdOutcome="se.outcome",SdExposure="se.exposure",OUTLIERtest=T, DISTORTIONtest=T,data=pl,NbDistribution=1000,SignifThreshold=0.05)
+```
 
 
 ```{r}
@@ -223,10 +229,11 @@ forest(dmres, atransf=exp,xlab=" ", mlab="Cardiovascular outcome (OR) per 1 mg/d
 
 
 
-
+https://mrcieu.github.io/TwoSampleMR/
 
 ```{r}
 library(TwoSampleMR)
+
 calcium_exp_dat <- read_exposure_data(
     filename ="snps_final_analysis_calcium_cvd.csv",
     sep = ",",
@@ -239,10 +246,16 @@ calcium_exp_dat <- read_exposure_data(
     pval_col = "pval.exposure"
 )
 
+
+calcium_exp_dat$beta.exposure<-2*calcium_exp_dat$beta.exposure
+calcium_exp_dat$se.exposure<-2*calcium_exp_dat$se.exposure
 chd_out_dat <- extract_outcome_data(
     snps = calcium_exp_dat$SNP,
     outcomes = 'ieu-a-7'
 )
+
+
+
 
 dat <- harmonise_data(
     exposure_dat = calcium_exp_dat ,
@@ -252,6 +265,11 @@ dat <- harmonise_data(
 res <- mr(dat)
 #> Analysing 'ieu-a-2' on 'ieu-a-7'
 res
+class(res)
+#change the results to odds ratio
+sapply(res[,7],function(x)exp(x))
+run_mr_presso(dat, NbDistribution = 1000, SignifThreshold = 0.05)
+
 ```
 
 
