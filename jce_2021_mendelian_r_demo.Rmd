@@ -1,0 +1,287 @@
+---
+title: "Mendelian randomization study demo"
+author: "Yoshihiko Raita, MD MPH MMSc"
+date: 
+output: html_notebook
+---
+
+
+
+#set up the directory
+```{r}
+#This is my directory. Please set up your directory.
+#Please change this to your own directory
+setwd("~/Dropbox/seminar_workshop/japan_clinical_epidemiology_2021")
+if (!require('dplyr')) install.packages('dplyr'); library('dplyr')
+if (!require('readr')) install.packages('readr'); library('readr')
+if (!require('stringr')) install.packages('stringr'); library('stringr')
+if (!require('data.table')) install.packages('data.table'); library('data.table')
+if (!require('TwoSampleMR')) install.packages('TwoSampleMR'); library('TwoSampleMR')
+if (!require('MendelianRandomization')) install.packages('MendelianRandomization'); library('MendelianRandomization')
+
+```
+
+
+
+
+#install GWAS summary statistics of the expsure (Calcium)
+In the JAMA paper, they cited the final variants (7 variants) from PLOS Genetics paper. If you would like to select variants from different thresholds, you need to install whole summary statistics data (mostly possible) and selecte variants using a new threshold, but the authors of the PLOS Genetics did not upload a whole summary statistics file. Later, I will explain how to do this briefly by using a different dataset.
+
+
+```{r}
+calcium_exp_data<-read.csv("calcium_exp_variants.csv", header=TRUE)
+calcium_exp_data
+calcium_exp_data$newposition<-paste0(calcium_exp_data$chromosome,":",calcium_exp_data$position)
+```
+
+
+
+
+
+#check confounders
+download the file
+http://csg.sph.umich.edu/willer/public/lipids2013/
+```{r}
+lipid_gwas_df<-data.table::fread("jointGwasMc_LDL.txt",header = TRUE)
+lipid_gwas_df$newposition<-gsub("chr","",lipid_gwas_df$SNP_hg18)
+calcium_exp_data%>%left_join(lipid_gwas_df,by="newposition")
+```
+The P-value of rs780094 is 1.016e-07
+
+```{r}
+calcium_exp_data<-calcium_exp_data%>%filter(SNP!="rs780094")
+dim(calcium_exp_data)
+```
+
+
+
+
+#If you would like to check confoundings associated with life style, you can use UK Biobank
+https://broad-ukb-sumstats-us-east-1.s3.amazonaws.com/round2/additive-tsvs/1239.gwas.imputed_v3.both_sexes.tsv.bgz
+https://broad-ukb-sumstats-us-east-1.s3.amazonaws.com/round2/annotations/variants.tsv.bgz
+annotation_df<- readr::read_tsv(gzfile("variants.tsv.bgz"),col_names=TRUE)
+Position of the variant in GRCh37 coordinates.
+```{r}
+#install.packages("data.table")   
+smoking_gwas_df<- readr::read_tsv(gzfile("1239.gwas.imputed_v3.both_sexes.tsv.bgz"),col_names=TRUE)
+#smoking_gwas_df<-tidyr::extract(smoking_gwas_df, variant, c('chromosome', 'position', 'allele1', 'allele2'), '(\\d+):(\\d+):(.*):(.*)')
+annotation_df<- readr::read_tsv(gzfile("variants.tsv.bgz"),col_names=TRUE)
+smoking_gwas_df<-smoking_gwas_df%>%left_join(annotation_df, by="variant")
+smoking_gwas_df$newposition<-paste0(smoking_gwas_df$chr,":",smoking_gwas_df$pos)
+merge_calcium_smoke<-calcium_exp_data%>%left_join(smoking_gwas_df, by=c("SNP"="rsid"))
+```
+
+
+
+
+
+
+# download the whole summary statistics
+https://www.ebi.ac.uk/gwas/search?query=26343387
+```{r}
+
+cardio_outcome2<-data.table::fread("cad.add.160614.website.txt",header = TRUE)
+cardio_outcome2$newposition<-paste0(cardio_outcome2$chr,":",cardio_outcome2$bp_hg19)
+```
+#Mahanttan plot
+You should get the identical Manhattan plot
+https://gwas.mrcieu.ac.uk/files/ieu-a-7/ieu-a-7_report.html
+```{r}
+source("https://raw.githubusercontent.com/YinLiLin/CMplot/master/R/CMplot.r")
+cardio_outcome2_select<-cardio_outcome2%>%select(markername,chr,bp_hg19,p_dgc)
+CMplot(as.data.frame(cardio_outcome2_select),type="p",plot.type="m",LOG10=TRUE,threshold=c(5*10^-8),file="jpg",memo="",dpi=300,cex=c(0.5,0.5,0.5),signal.cex = 0.5, file.output=TRUE,verbose=TRUE,width=14,height=6,chr.labels.angle=45)
+```
+
+
+
+
+# Find variants in the outcome file
+```{r}
+merge_data<-calcium_exp_data%>%inner_join(cardio_outcome2, by=c("SNP"="markername"))
+merge_data
+merge_data<-merge_data%>%filter(SNP!="rs780094")
+
+merge_data$effect_allele<-str_to_lower(merge_data$effect_allele)
+merge_data$noneffect_allele<-str_to_lower(merge_data$noneffect_allele)
+
+
+write.csv(merge_data, "snps_final_analysis_calcium_cvd.csv", row.names = F)
+```
+#Final analysis
+Harmonization
+```{r}
+
+#4.iii rename the columns in the outcome file to be the same for every file
+merge_data_simple<-data.frame(SNP = merge_data$SNP,
+                  chr_name=merge_data$chromosome,
+                  chrom_start=merge_data$position,
+                   beta.exposure =2*merge_data$beta.exposure,
+                  se.exposure = 2*merge_data$se.exposure,
+                   effect_allele.exposure = merge_data$effect_allele.exposure,
+                  other_allele.exposure =merge_data$other_allele.exposure ,
+                  beta.outcome =merge_data$beta,
+                  se.outcome = merge_data$se_dgc,
+                  effect_allele.outcome = merge_data$effect_allele,
+                  other_allele.outcome =merge_data$noneffect_allele,
+                   pval.exposure= merge_data$pval.exposure,
+                  pval.outcome =merge_data$p_dgc)
+pl<-merge_data_simple
+lev2 <- unique( c( levels(as.factor(pl$effect_allele.outcome)), levels(as.factor(pl$effect_allele.exposure)) ) )
+pl$effect_allele.outcome <- factor(pl$effect_allele.outcome, levels=lev2)
+pl$effect_allele.exposure <- factor(pl$effect_allele.exposure, levels=lev2)
+pl$effect_allele.exposure<-gsub(" ", "",pl$effect_allele.exposure, fixed = TRUE)
+
+
+pl$beta.outcome[pl$effect_allele.exposure!=pl$effect_allele.outcome]<-pl$beta.outcome[pl$effect_allele.exposure!=pl$effect_allele.outcome] * -1
+
+
+pl$fstat<-(pl$beta.exposure*pl$beta.exposure)/(pl$se.exposure*pl$se.exposure)
+
+#take the mean
+mean(pl$fstat)
+
+#4 vi.get forest plot with fixed effects, same as Mendelianrandomization IVW with fixed effects 
+x<-pl$beta.exposure # beta for SNP to exposure
+sigmax<-pl$se.exposure # its standard errors
+y<-pl$beta.outcome # beta for SNP to outcome
+sigmay<-pl$se.outcome # its standard errors
+pl$Wald<-y/x #Wald estimate
+pl$Waldvar<-(sigmay^2/x^2) # using Burgess's method
+pl$lab<-paste(pl$SNP, pl$gene, sep=" ")
+#pl<-pl[pl$SNP!="rs550057",]
+dmres<-rma.uni(yi=pl$Wald, vi=pl$Waldvar, slab=pl$lab, method="FE")
+
+forest(dmres, atransf=exp,xlab=" ", mlab="Cardiovascular outcome (OR) per 0.5-mg/dl (1SD) increase", at=log(c(.5, 4.0)),xlim=c(-1.7,1.3),cex=.8)
+
+
+```
+
+
+```{r}
+
+#4.iii rename the columns in the outcome file to be the same for every file
+merge_data_simple<-data.frame(SNP = merge_data$SNP,
+                  chr_name=merge_data$chromosome,
+                  chrom_start=merge_data$position,
+                   beta.exposure =merge_data$beta.exposure,
+                  se.exposure = merge_data$se.exposure,
+                   effect_allele.exposure = merge_data$effect_allele.exposure,
+                  other_allele.exposure =merge_data$other_allele.exposure ,
+                  beta.outcome =merge_data$beta,
+                  se.outcome = merge_data$se_dgc,
+                  effect_allele.outcome = merge_data$effect_allele,
+                  other_allele.outcome =merge_data$noneffect_allele,
+                   pval.exposure= merge_data$pval.exposure,
+                  pval.outcome =merge_data$p_dgc)
+pl<-merge_data_simple
+lev2 <- unique( c( levels(as.factor(pl$effect_allele.outcome)), levels(as.factor(pl$effect_allele.exposure)) ) )
+pl$effect_allele.outcome <- factor(pl$effect_allele.outcome, levels=lev2)
+pl$effect_allele.exposure <- factor(pl$effect_allele.exposure, levels=lev2)
+pl$effect_allele.exposure<-gsub(" ", "",pl$effect_allele.exposure, fixed = TRUE)
+
+
+pl$beta.outcome[pl$effect_allele.exposure!=pl$effect_allele.outcome]<-pl$beta.outcome[pl$effect_allele.exposure!=pl$effect_allele.outcome] * -1
+
+
+pl$fstat<-(pl$beta.exposure*pl$beta.exposure)/(pl$se.exposure*pl$se.exposure)
+
+#take the mean
+mean(pl$fstat)
+
+#4 vi.get forest plot with fixed effects, same as Mendelianrandomization IVW with fixed effects 
+x<-pl$beta.exposure # beta for SNP to exposure
+sigmax<-pl$se.exposure # its standard errors
+y<-pl$beta.outcome # beta for SNP to outcome
+sigmay<-pl$se.outcome # its standard errors
+pl$Wald<-y/x #Wald estimate
+pl$Waldvar<-(sigmay^2/x^2) # using Burgess's method
+pl$lab<-paste(pl$SNP, pl$gene, sep=" ")
+#pl<-pl[pl$SNP!="rs550057",]
+dmres<-rma.uni(yi=pl$Wald, vi=pl$Waldvar, slab=pl$lab, method="FE")
+
+forest(dmres, atransf=exp,xlab=" ", mlab="Cardiovascular outcome (OR) per 1 mg/dl increase", at=log(c(.2, 2.5)),xlim=c(-1.7,1.3),cex=.8)
+
+
+```
+
+
+
+
+
+
+
+```{r}
+library(TwoSampleMR)
+calcium_exp_dat <- read_exposure_data(
+    filename ="snps_final_analysis_calcium_cvd.csv",
+    sep = ",",
+    snp_col = "SNP",
+    beta_col = "beta.exposure",
+    se_col = "se.exposure",
+    eaf="exposure_allele_freq",
+    effect_allele_col = "effect_allele.exposure",
+    other_allele_col = "other_allele.exposure",
+    pval_col = "pval.exposure"
+)
+
+chd_out_dat <- extract_outcome_data(
+    snps = calcium_exp_dat$SNP,
+    outcomes = 'ieu-a-7'
+)
+
+dat <- harmonise_data(
+    exposure_dat = calcium_exp_dat ,
+    outcome_dat = chd_out_dat
+)
+
+res <- mr(dat)
+#> Analysing 'ieu-a-2' on 'ieu-a-7'
+res
+```
+
+
+
+
+
+
+
+#IL-6 blockade and cardiovascular risk
+http://www.phpc.cam.ac.uk/ceu/proteins/
+IL-6R
+CHR1 154,377,669-250kb or 154,441,926+250kb
+
+
+```{r}
+il6r_gwas_df<-data.table::fread("IL6R.4139.71.2_chrom_1_meta_final_v1.tsv")
+
+il6r_gwas_df$newposition<-paste0(il6r_gwas_df$chromosome,":",il6r_gwas_df$position)
+
+il6r_gwas_df$p_val<-10^il6r_gwas_df$`log(P)`
+
+
+
+
+```
+```{r}
+threshold<-log(5*10^-8, 10)
+il6r_gwas_select_df<-il6r_gwas_df%>%filter(`log(P)`<threshold)
+
+head(il6r_gwas_select_df)
+dim(il6r_gwas_select_df)
+summary(il6r_gwas_select_df)
+```
+
+#154377669-300000
+#154441926+300000
+```{r}
+left<-154377669-300000
+right<-154441926+300000
+il6r_gwas_select_df_select<-il6r_gwas_select_df%>%filter(position>left & position<right )
+```
+
+
+
+
+Additional
+https://shiny.cnsgenomics.com/mRnd/
+
