@@ -429,8 +429,6 @@ il6r_gwas_select_df_select3<-
 il6r_gwas_select_df_select3%>%filter(is.na(beta))
 ```
 ```{r}
-
-
 il6r_gwas_select_df_select3_snpna<-il6r_gwas_select_df_select3%>%filter(is.na(beta))
 il6r_gwas_select_df_select3_snpna$newposition2<-paste0("chr",il6r_gwas_select_df_select3_snpna$newposition)
   my_proxies <- LDproxy(snp =   il6r_gwas_select_df_select3_snpna$newposition2,
@@ -462,7 +460,7 @@ nrow(merge_data)
 
 
 
-#4.iii rename the columns in the outcome file to be the same for every file
+#
 merge_data_simple<-data.frame(SNP = merge_data$rsid,
                   chr_name=merge_data$chr.x,
                   chrom_start=merge_data$pos,
@@ -497,7 +495,7 @@ merge_data_simple$fstat<-(merge_data_simple$beta.exposure*merge_data_simple$beta
 #take the mean
 mean(merge_data_simple$fstat)
 
-#4 vi.get forest plot with fixed effects, same as Mendelianrandomization IVW with fixed effects 
+#Forest plot with fixed effects, same as Mendelianrandomization IVW with fixed effects 
 x<-merge_data_simple$beta.exposure # beta for SNP to exposure
 sigmax<-merge_data_simple$se.exposure # its standard errors
 y<-merge_data_simple$beta.outcome # beta for SNP to outcome
