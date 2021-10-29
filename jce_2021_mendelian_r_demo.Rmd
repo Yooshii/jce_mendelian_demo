@@ -25,6 +25,7 @@ if (!require("devtools")) { install.packages("devtools") } else {}
 devtools::install_github("rondolab/MR-PRESSO");library(MRPRESSO)
 if (!require("remotes")) { install.packages("remotes") } else {}
 remotes::install_github("CBIIT/LDlinkR");library('LDlinkR')
+
 ```
 
 
@@ -166,8 +167,7 @@ merge_data_simple$Wald<-y/x #Wald estimate
 merge_data_simple$Waldvar<-(sigmay^2/x^2) # using Burgess's method
 merge_data_simple$lab<-paste(merge_data_simple$SNP, merge_data_simple$gene, sep=" ")
 
-dmres<-rma.uni(yi=merge_data_simple$Wald, vi=merge_data_simple$Waldvar, slab=merge_data_simple$lab, method="REML")
-
+dmres<-rma.uni(yi=merge_data_simple$Wald, vi=merge_data_simple$Waldvar, slab=merge_data_simple$lab, method="FE") #"REML"
 forest(dmres, atransf=exp,xlab=" ", mlab="Cardiovascular outcome (OR) per 1 mg/dl increase", at=log(c(.2, 2.5)),xlim=c(-1.7,1.3),cex=.8,showweights = T)
 
 
@@ -257,13 +257,38 @@ merge_data_simple$Wald<-y/x #Wald estimate
 merge_data_simple$Waldvar<-(sigmay^2/x^2) # using Burgess's method
 merge_data_simple$lab<-paste(merge_data_simple$SNP, merge_data_simple$gene, sep=" ")
 
-dmres<-rma.uni(yi=merge_data_simple$Wald, vi=merge_data_simple$Waldvar, slab=merge_data_simple$lab, method="REML")
+dmres<-rma.uni(yi=merge_data_simple$Wald, vi=merge_data_simple$Waldvar, slab=merge_data_simple$lab, method="FE")
 forest(dmres, atransf=exp,xlab=" ", mlab="Cardiovascular outcome (OR) per 0.5-mg/dl (1SD) increase", at=log(c(.5, 4.0)),xlim=c(-1.7,1.3),cex=.8,showweights = T)
 
 tiff("forest_plot_calcium0.5_CVD.tiff", units="in", width=8, height=5, res=300)
 forest(dmres, atransf=exp,xlab=" ", mlab="Cardiovascular outcome (OR) per 0.5-mg/dl (1SD) increase", at=log(c(.5, 4.0)),xlim=c(-1.7,1.3),cex=.8,showweights = T)
 dev.off()
 ```
+
+
+
+#Assessing heterogeniety
+```{r}
+dmres
+```
+#Sensitivity Analysis
+```{r}
+#Mendelian randomization package withfixed effects
+MRInputObject <- mr_input(merge_data_simple$beta.exposure, merge_data_simple$se.exposure, merge_data_simple$beta.outcome, merge_data_simple$se.outcome)
+MendelianRandomization::mr_ivw(MRInputObject,model="fixed")
+MendelianRandomization::mr_ivw(MRInputObject,model="random")
+
+#MR-Egger and MR_Median
+MendelianRandomization::mr_egger(MRInputObject)
+MendelianRandomization::mr_median(MRInputObject)
+
+
+#Mendelian randomization package withfixed effects
+mr_loo( MRInputObject,alpha = 0.05)
+
+
+```
+
 
 
 
@@ -274,7 +299,7 @@ To estimate the causal effect of the risk factors on the asthma outcome with mor
 ```{r}
 model_presso<-mr_presso(BetaOutcome="beta.outcome", BetaExposure="beta.exposure",SdOutcome="se.outcome",SdExposure="se.exposure",OUTLIERtest=T, DISTORTIONtest=T,data=merge_data_simple,NbDistribution=1000,SignifThreshold=0.05)
 
-
+model_presso
 
 exp(model_presso$`Main MR results`[1,3]	)
 exp(model_presso$`Main MR results`[1,3]-qnorm(0.975)*model_presso$`Main MR results`[1,4]	)
