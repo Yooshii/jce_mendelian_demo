@@ -436,7 +436,7 @@ il6r_gwas_select_df_select3_snpna$newposition2<-paste0("chr",il6r_gwas_select_df
   my_proxies <- LDproxy(snp =   il6r_gwas_select_df_select3_snpna$newposition2,
                       pop = "EUR", 
                       r2d = "r2", 
-                      token = "********"  #Pleas change your token
+                      token = "********"  #Pleas change this to your token
                      )
 my_proxies2<-my_proxies #%>%filter(R2>0.5)
 my_proxies2
