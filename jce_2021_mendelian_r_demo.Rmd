@@ -10,6 +10,7 @@ Thanks!
 
 #set up the directory
 ```{r}
+#rm(list=ls()); gc();  gc();
 #This is my directory. Please set up your directory.
 #Please change this to your own directory
 setwd("~/Dropbox/seminar_workshop/japan_clinical_epidemiology_2021")
