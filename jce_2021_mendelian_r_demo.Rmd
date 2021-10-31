@@ -75,6 +75,9 @@ https://broad-ukb-sumstats-us-east-1.s3.amazonaws.com/round2/additive-tsvs/1239.
 https://broad-ukb-sumstats-us-east-1.s3.amazonaws.com/round2/annotations/variants.tsv.bgz
 annotation_df<- readr::read_tsv(gzfile("variants.tsv.bgz"),col_names=TRUE)
 Position of the variant in GRCh37 coordinates.
+
+6*1=6  0.05/6
+6*5=30 0.05/30
 ```{r}
 #install.packages("data.table")   
 smoking_gwas_df<- readr::read_tsv(gzfile("1239.gwas.imputed_v3.both_sexes.tsv.bgz"),col_names=TRUE)
@@ -435,7 +438,7 @@ il6r_gwas_select_df_select3_snpna$newposition2<-paste0("chr",il6r_gwas_select_df
   my_proxies <- LDproxy(snp =   il6r_gwas_select_df_select3_snpna$newposition2,
                       pop = "EUR", 
                       r2d = "r2", 
-                      token = "********"  #Pleas change this to your token
+                      token = "*****"  #Pleas change this to your token
                      )
 my_proxies2<-my_proxies #%>%filter(R2>0.5)
 my_proxies2
