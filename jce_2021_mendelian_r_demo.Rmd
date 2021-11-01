@@ -1,8 +1,12 @@
 ---
 title: "Mendelian randomization study demo"
 author: "Yoshihiko Raita, MD MPH MMSc"
-date: 
-output: html_notebook
+date: 'null'
+output:
+  html_document:
+    df_print: paged
+  html_notebook: default
+  pdf_document: default
 ---
 #Please note that this is still under construction. I need further push of the code. 
 Thanks!
