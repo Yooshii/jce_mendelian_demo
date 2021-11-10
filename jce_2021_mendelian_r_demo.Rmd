@@ -5,6 +5,7 @@ date:
 output: html_notebook
 ---
 I really appreciate your workshop by Aki
+This is the demo.
 #Please note that this is still under construction. I need further push of the code. 
 Thanks!
 
