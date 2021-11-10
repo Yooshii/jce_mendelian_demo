@@ -4,7 +4,7 @@ author: "Yoshihiko Raita, MD MPH MMSc"
 date: 
 output: html_notebook
 ---
-I really appreciate your workshop by Aki
+I really appreciate your workshop (by Aki)
 #Please note that this is still under construction. I need further push of the code. 
 Thanks!
 
